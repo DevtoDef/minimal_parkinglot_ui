@@ -35,7 +35,6 @@ class _NfcWriteDialogState extends State<NfcWriteDialog> {
 
     NfcManager.instance.startSession(
       alertMessage: "Đưa thẻ NFC lại gần điện thoại để ghi dữ liệu",
-
       onDiscovered: (NfcTag tag) async {
         try {
           var ndef = Ndef.from(tag);
@@ -46,62 +45,41 @@ class _NfcWriteDialogState extends State<NfcWriteDialog> {
             return;
           }
 
-          // === BƯỚC KIỂM TRA MỚI ===
-          // Kiểm tra xem thẻ đã có dữ liệu NDEF hay chưa
+          // === BƯỚC KIỂM TRA DỮ LIỆU HIỆN TẠI ===
           if (ndef.cachedMessage != null &&
               ndef.cachedMessage!.records.isNotEmpty) {
             final record = ndef.cachedMessage!.records.first;
             if (record.typeNameFormat == NdefTypeNameFormat.nfcWellknown &&
                 record.type.first == 0x54) {
               final messagePayload = record.payload;
-              // Bỏ qua byte đầu tiên (status byte) và các byte ngôn ngữ
               final languageCodeLength = messagePayload.first & 0x3F;
-              final message = String.fromCharCodes(
+              final existingMessage = String.fromCharCodes(
                 messagePayload.sublist(1 + languageCodeLength),
               );
 
-              print('Đọc được message từ thẻ: "$message"');
-              if (message != '"TEST OK! "') {
+              print('Đọc được message từ thẻ: $existingMessage');
+
+              // Kiểm tra nếu thẻ đã có nfc_card_id (không phải TEST)
+              if (existingMessage != 'TEST OK! ' &&
+                  existingMessage.isNotEmpty) {
                 _updateStateOnError(
                   'Thẻ này đã có dữ liệu. Vui lòng dùng thẻ trắng.',
                 );
                 return;
               }
-              // Nếu là "TEST OK!", thì tiếp tục đến bước ghi đè bên dưới
-              print('Thẻ test hợp lệ, tiến hành ghi đè...');
+
+              // Nếu là thẻ TEST, tiến hành ghi đè
+              if (existingMessage == 'TEST OK!') {
+                print('Phát hiện thẻ test, tiến hành ghi đè...');
+                await _writeToCard(ndef, widget.dataToWrite);
+                return;
+              }
             }
-            setState(() {
-              _message = 'Thẻ này đã có dữ liệu. Vui lòng dùng thẻ trắng.';
-              _icon = Icons.error;
-              _iconColor = Colors.orange;
-            });
-            NfcManager.instance.stopSession(
-              errorMessage: 'Thẻ đã được sử dụng.',
-            );
-            return;
           }
           // === KẾT THÚC BƯỚC KIỂM TRA ===
 
-          // Thẻ là NDEF và trống, kiểm tra có thể ghi không
-          if (!ndef.isWritable) {
-            setState(() {
-              _message = 'Thẻ này không thể ghi (chỉ đọc)';
-              _icon = Icons.error;
-              _iconColor = Colors.red;
-            });
-            NfcManager.instance.stopSession(
-              errorMessage: 'Thẻ này không thể ghi',
-            );
-            return;
-          }
-
-          // Ghi dữ liệu vào thẻ
-          NdefMessage message = NdefMessage([
-            NdefRecord.createText(widget.dataToWrite),
-          ]);
-          await ndef.write(message);
-
-          _updateStateOnSuccess('Ghi thẻ thành công!');
+          // Thẻ trống hoặc không có dữ liệu NDEF
+          await _writeToCard(ndef, widget.dataToWrite);
         } catch (e) {
           _updateStateOnError('Lỗi khi ghi thẻ: $e');
         }
@@ -109,7 +87,21 @@ class _NfcWriteDialogState extends State<NfcWriteDialog> {
     );
   }
 
-  // Tách logic format và ghi ra một hàm riêng cho sạch sẽ
+  // Hàm ghi dữ liệu vào thẻ NDEF
+  Future<void> _writeToCard(Ndef ndef, String data) async {
+    // Kiểm tra thẻ có thể ghi không
+    if (!ndef.isWritable) {
+      _updateStateOnError('Thẻ này không thể ghi (chỉ đọc)');
+      return;
+    }
+
+    // Ghi dữ liệu vào thẻ
+    NdefMessage message = NdefMessage([NdefRecord.createText(data)]);
+    await ndef.write(message);
+    _updateStateOnSuccess('Ghi thẻ thành công!');
+  }
+
+  // Format thẻ trắng và ghi dữ liệu
   Future<void> _formatAndWrite(NfcTag tag, String data) async {
     var ndefFormatable = NdefFormatable.from(tag);
     if (ndefFormatable != null) {
