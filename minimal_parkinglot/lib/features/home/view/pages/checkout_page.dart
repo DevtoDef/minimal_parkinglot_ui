@@ -10,7 +10,6 @@ import 'package:minimal_parkinglot/features/home/view/widgets/scanning_ui.dart';
 import 'package:minimal_parkinglot/features/home/viewmodel/home_viewmodel.dart';
 import 'package:nfc_manager/nfc_manager.dart';
 
-// Model giả để minh họa - bạn sẽ thay bằng model từ API
 
 class CheckOutPage extends ConsumerStatefulWidget {
   const CheckOutPage({super.key});

@@ -124,4 +124,47 @@ class HomeRemoteRepository {
       return Left(FailureMessage(e.toString()));
     }
   }
+
+  Future<Either<FailureMessage, void>> deleteVehicle({
+    required String accessToken,
+    required int vehicleId,
+  }) async {
+    try {
+      final response = await http.delete(
+        Uri.parse(
+          '${ServerConstants.baseUrl}/parkingLot/deleteVehicle/$vehicleId',
+        ),
+        headers: {'Authorization': 'Bearer $accessToken'},
+      );
+
+      if (response.statusCode == 200) {
+        return const Right(null); // Thành công, không cần trả về gì
+      } else {
+        return Left(FailureMessage(jsonDecode(response.body)['message']));
+      }
+    } catch (e) {
+      return Left(FailureMessage(e.toString()));
+    }
+  }
+
+  Future<Either<FailureMessage, void>> checkOutVehicle({
+    required String accessToken,
+    required String nfcCardId,
+  }) async {
+    try {
+      final response = await http.put(
+        Uri.parse('${ServerConstants.baseUrl}/parkingLot/checkout/$nfcCardId'),
+        headers: {'Authorization': 'Bearer $accessToken'},
+      );
+
+      if (response.statusCode == 200) {
+        print('Đã Checkout Thành công');
+        return const Right(null); // Thành công, không cần trả về gì
+      } else {
+        return Left(FailureMessage(jsonDecode(response.body)['message']));
+      }
+    } catch (e) {
+      return Left(FailureMessage(e.toString()));
+    }
+  }
 }

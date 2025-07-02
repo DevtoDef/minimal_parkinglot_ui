@@ -89,12 +89,16 @@ class _CheckInPageState extends ConsumerState<CheckInPage> {
               }
             } else {
               // Nếu ghi thẻ thất bại hoặc người dùng hủy
-              if (mounted)
+              if (mounted) {
+                ref
+                    .read(homeViewmodelProvider.notifier)
+                    .cancelCheckIn(vehicleId: vehicle.id);
                 showSnackBar(
                   context,
-                  'Ghi thẻ NFC đã bị hủy.',
+                  'Ghi thẻ thất bại đang tiến hành hoàn tác ...',
                   backgroundColor: Colors.orange,
                 );
+              }
             }
           });
         },

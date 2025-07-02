@@ -67,4 +67,13 @@ class HomeViewmodel extends _$HomeViewmodel {
       Right(value: final r) => state = AsyncData(r),
     };
   }
+
+  Future<void> cancelCheckIn({required int vehicleId}) async {
+    final accessToken = ref.read(currentUserNotifierProvider)!.accessToken;
+    await _homeRemoteRepository.deleteVehicle(
+      accessToken: accessToken,
+      vehicleId: vehicleId,
+    );
+    // Không cần thay đổi state ở đây, vì đây là một hành động nền
+  }
 }
